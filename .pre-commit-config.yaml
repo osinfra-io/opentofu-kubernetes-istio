@@ -3,7 +3,7 @@
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
@@ -11,7 +11,7 @@ repos:
       - id: check-symlinks
 
   - repo: https://github.com/osinfra-io/pre-commit-hooks
-    rev: v0.1.1
+    rev: 9c95dd95971d6f78e315ad1de8d5fae3ae1059f6  # frozen: v0.1.1
     hooks:
       - id: tofu-fmt
         verbose: true
