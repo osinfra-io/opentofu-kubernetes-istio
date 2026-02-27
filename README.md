@@ -1,6 +1,6 @@
 # <img align="left" width="45" height="45" src="https://github.com/user-attachments/assets/ce1fe535-f4f3-451f-bbd9-45fde04c000c"> Kubernetes - Istio OpenTofu Module
 
-[![OpenTofu Tests](https://img.shields.io/github/actions/workflow/status/osinfra-io/opentofu-kubernetes-istio/test.yml?style=for-the-badge&logo=opentofu&labelColor=FEDA15&label=OpenTofu%20Tests)](https://github.com/osinfra-io/opentofu-kubernetes-istio/actions/workflows/test.yml) [![Dependabot](https://img.shields.io/github/actions/workflow/status/osinfra-io/opentofu-kubernetes-istio/dependabot.yml?style=for-the-badge&logo=github&labelColor=181717&logoColor=white&label=Dependabot)](https://github.com/osinfra-io/opentofu-kubernetes-istio/actions/workflows/dependabot.yml)
+[![OpenTofu Tests](https://img.shields.io/github/actions/workflow/status/osinfra-io/opentofu-kubernetes-istio/test.yml?style=for-the-badge&logo=opentofu&color=FEDA15&label=OpenTofu%20Tests)](https://github.com/osinfra-io/opentofu-kubernetes-istio/actions/workflows/test.yml) [![Dependabot](https://img.shields.io/github/actions/workflow/status/osinfra-io/opentofu-kubernetes-istio/dependabot.yml?style=for-the-badge&logo=github&color=181717&label=Dependabot)](https://github.com/osinfra-io/opentofu-kubernetes-istio/actions/workflows/dependabot.yml)
 
 ## Repository Description
 
