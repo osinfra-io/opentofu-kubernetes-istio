@@ -2,7 +2,9 @@
 # https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/compute_global_address
 
 resource "google_compute_global_address" "istio_gateway_mci" {
-  count = var.gke_fleet_host_project_id == "" ? 1 : 0
+  lifecycle {
+    enabled = var.gke_fleet_host_project_id == ""
+  }
 
   labels  = var.labels
   name    = "istio-gateway-mci"
@@ -16,7 +18,9 @@ resource "google_compute_global_address" "istio_gateway_mci" {
 # MultiClusterIngress resources. #36
 
 resource "google_compute_managed_ssl_certificate" "istio_gateway_mci" {
-  count = var.gke_fleet_host_project_id == "" ? 1 : 0
+  lifecycle {
+    enabled = var.gke_fleet_host_project_id == ""
+  }
 
   managed {
     domains = local.gateway_domains
@@ -30,8 +34,11 @@ resource "google_compute_managed_ssl_certificate" "istio_gateway_mci" {
 # https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/compute_security_policy
 
 resource "google_compute_security_policy" "istio_gateway" {
+  lifecycle {
+    enabled = var.gke_fleet_host_project_id == ""
+  }
+
   provider = google-beta # Required for the adaptive_protection_config auto_deploy_config block
-  count    = var.gke_fleet_host_project_id == "" ? 1 : 0
 
   adaptive_protection_config {
     auto_deploy_config {
@@ -130,7 +137,9 @@ resource "google_compute_security_policy" "istio_gateway" {
 # https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/compute_ssl_policy
 
 resource "google_compute_ssl_policy" "istio_gateway" {
-  count = var.gke_fleet_host_project_id == "" ? 1 : 0
+  lifecycle {
+    enabled = var.gke_fleet_host_project_id == ""
+  }
 
   name            = "istio-gateway"
   min_tls_version = "TLS_1_2"
@@ -147,7 +156,7 @@ resource "google_dns_record_set" "istio_gateway_mci" {
   managed_zone = each.value.managed_zone
   name         = "${each.key}."
   project      = each.value.project
-  rrdatas      = [google_compute_global_address.istio_gateway_mci[0].address]
+  rrdatas      = [google_compute_global_address.istio_gateway_mci.address]
   ttl          = 300
   type         = "A"
 }

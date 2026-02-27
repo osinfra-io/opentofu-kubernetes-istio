@@ -11,8 +11,8 @@ variable "gateway_dns" {
 }
 
 variable "gke_fleet_host_project_id" {
-  type        = string
   description = "The project ID of the GKE Hub host project"
+  type        = string
   default     = ""
 }
 
