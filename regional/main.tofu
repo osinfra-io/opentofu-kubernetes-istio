@@ -57,6 +57,10 @@ resource "helm_release" "istiod" {
 resource "helm_release" "gateway" {
   count = var.enable_istio_gateway ? 1 : 0
 
+  depends_on = [
+    helm_release.istiod
+  ]
+
   chart      = "gateway"
   name       = "gateway"
   namespace  = "istio-ingress"
@@ -68,10 +72,6 @@ resource "helm_release" "gateway" {
   ]
 
   version = var.istio_version
-
-  depends_on = [
-    helm_release.istiod
-  ]
 }
 
 # Kubernetes Ingress Resource
