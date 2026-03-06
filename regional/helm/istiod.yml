@@ -1,3 +1,17 @@
+autoscaleEnabled: true
+autoscaleMax: 5
+autoscaleMin: 1
+
+cpu:
+  targetAverageUtilization: 85
+
+deploymentLabels:
+  tags.datadoghq.com/service: istio-control-plane
+  tags.datadoghq.com/source: istio
+
+env:
+  ENABLE_CA_SERVER: "false"
+
 global:
   caAddress: cert-manager-istio-csr.cert-manager.svc:443
   meshID: default
@@ -9,51 +23,36 @@ meshConfig:
     proxyMetadata:
       ECC_CURVE: "P256"
       ECC_SIGNATURE_ALGORITHM: "ECDSA"
-      ISTIO_META_DNS_CAPTURE: "true"
       ISTIO_META_DNS_AUTO_ALLOCATE: "true"
+      ISTIO_META_DNS_CAPTURE: "true"
 
-pilot:
-  autoscaleEnabled: true
-  autoscaleMin: 1
-  autoscaleMax: 5
+podAnnotations:
+  ad.datadoghq.com/discovery.check_names: '["istio"]'
+  ad.datadoghq.com/discovery.init_configs: '[{}]'
 
-  cpu:
-    targetAverageUtilization: 85
+  ad.datadoghq.com/discovery.instances: |
+    [
+      {
+        "istiod_endpoint": "http://%%host%%:15014/metrics",
+        "use_openmetrics": "true"
+      }
+    ]
 
-  deploymentLabels:
-    tags.datadoghq.com/service: istio-control-plane
-    tags.datadoghq.com/source: istio
+  ad.datadoghq.com/discovery.logs: '[{"source":"istio"}]'
 
-  env:
-    ENABLE_CA_SERVER: "false"
+podLabels:
+  tags.datadoghq.com/service: istio-control-plane
+  tags.datadoghq.com/source: istio
 
-  podAnnotations:
-    ad.datadoghq.com/discovery.check_names: '["istio"]'
-    ad.datadoghq.com/discovery.init_configs: '[{}]'
+rollingMaxSurge: 100%
+rollingMaxUnavailable: 25%
 
-    ad.datadoghq.com/discovery.instances: |
-      [
-        {
-          "istiod_endpoint": "http://%%host%%:15014/metrics",
-          "use_openmetrics": "true"
-        }
-      ]
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app: istiod
 
-    ad.datadoghq.com/discovery.logs: '[{"source":"istio"}]'
-
-  podLabels:
-    tags.datadoghq.com/service: istio-control-plane
-    tags.datadoghq.com/source: istio
-
-  rollingMaxSurge: 100%
-  rollingMaxUnavailable: 25%
-
-  topologySpreadConstraints:
-    - maxSkew: 1
-      topologyKey: topology.kubernetes.io/zone
-      whenUnsatisfiable: ScheduleAnyway
-      labelSelector:
-        matchLabels:
-          app: istiod
-
-  traceSampling: 100.0
+traceSampling: 100.0

@@ -2,6 +2,15 @@
 # https://opentofu.org/docs/language/values/locals
 
 locals {
+  gateway_domains = keys(var.gateway_dns)
+
+  gateway_helm_values = [
+    for k, v in local.gateway_helm_values_map : {
+      name  = k
+      value = v
+    }
+  ]
+
   gateway_helm_values_map = {
     "autoscaling.minReplicas"                  = var.gateway_autoscale_min
     "labels.tags\\.datadoghq\\.com/env"        = module.helpers.environment
@@ -22,39 +31,6 @@ locals {
     "resources.requests.memory"                = var.gateway_memory_requests
   }
 
-  gateway_helm_values = [
-    for k, v in local.gateway_helm_values_map : {
-      name  = k
-      value = v
-    }
-  ]
-
-  istiod_helm_values_map = {
-    "global.hub"                                            = "${var.artifact_registry}/istio"
-    "global.multiCluster.clusterName"                       = local.multi_cluster_name
-    "global.proxy.resources.limits.cpu"                     = var.proxy_cpu_limits
-    "global.proxy.resources.limits.memory"                  = var.proxy_memory_limits
-    "global.proxy.resources.requests.cpu"                   = var.proxy_cpu_requests
-    "global.proxy.resources.requests.memory"                = var.proxy_memory_requests
-    "pilot.autoscaleMin"                                    = var.pilot_autoscale_min
-    "pilot.deploymentLabels.tags\\.datadoghq\\.com/env"     = module.helpers.environment
-    "pilot.deploymentLabels.tags\\.datadoghq\\.com/version" = var.istio_version
-    "pilot.podLabels.tags\\.datadoghq\\.com/env"            = module.helpers.environment
-    "pilot.podLabels.tags\\.datadoghq\\.com/version"        = var.istio_version
-    "pilot.resources.limits.cpu"                            = var.pilot_cpu_limits
-    "pilot.resources.limits.memory"                         = var.pilot_memory_limits
-    "pilot.resources.requests.cpu"                          = var.pilot_cpu_requests
-    "pilot.resources.requests.memory"                       = var.pilot_memory_requests
-    "pilot.replicaCount"                                    = var.pilot_replica_count
-  }
-
-  istiod_helm_values = [
-    for k, v in local.istiod_helm_values_map : {
-      name  = k
-      value = v
-    }
-  ]
-
   istio_gateway_datadog_apm_env = <<EOF
     {
     \"DD_ENV\":\"${module.helpers.environment}\"\,
@@ -74,6 +50,31 @@ locals {
     }
   EOF
 
-  gateway_domains    = keys(var.gateway_dns)
+  istiod_helm_values = [
+    for k, v in local.istiod_helm_values_map : {
+      name  = k
+      value = v
+    }
+  ]
+
+  istiod_helm_values_map = {
+    "autoscaleMin"                                    = var.pilot_autoscale_min
+    "deploymentLabels.tags\\.datadoghq\\.com/env"     = module.helpers.environment
+    "deploymentLabels.tags\\.datadoghq\\.com/version" = var.istio_version
+    "global.hub"                                      = "${var.artifact_registry}/istio"
+    "global.multiCluster.clusterName"                 = local.multi_cluster_name
+    "global.proxy.resources.limits.cpu"               = var.proxy_cpu_limits
+    "global.proxy.resources.limits.memory"            = var.proxy_memory_limits
+    "global.proxy.resources.requests.cpu"             = var.proxy_cpu_requests
+    "global.proxy.resources.requests.memory"          = var.proxy_memory_requests
+    "podLabels.tags\\.datadoghq\\.com/env"            = module.helpers.environment
+    "podLabels.tags\\.datadoghq\\.com/version"        = var.istio_version
+    "replicaCount"                                    = var.pilot_replica_count
+    "resources.limits.cpu"                            = var.pilot_cpu_limits
+    "resources.limits.memory"                         = var.pilot_memory_limits
+    "resources.requests.cpu"                          = var.pilot_cpu_requests
+    "resources.requests.memory"                       = var.pilot_memory_requests
+  }
+
   multi_cluster_name = module.helpers.zone != null ? "${var.cluster_prefix}-${module.helpers.region}-${module.helpers.zone}-${module.helpers.env}" : "${var.cluster_prefix}-${module.helpers.region}-${module.helpers.env}"
 }
