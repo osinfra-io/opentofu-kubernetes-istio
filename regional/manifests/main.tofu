@@ -1,5 +1,5 @@
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+# Resources
+# https://opentofu.org/docs/language/resources
 
 resource "kubernetes_manifest" "istio_cluster_services_destination_rule" {
   manifest = {

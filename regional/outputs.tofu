@@ -3,5 +3,5 @@
 
 output "gateway_ip" {
   description = "The IP address of the Istio Gateway"
-  value       = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
+  value       = local.istio_gateway_address
 }

@@ -1,5 +1,5 @@
-# Google Compute Global Address Resource
-# https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/compute_global_address
+# Resources
+# https://opentofu.org/docs/language/resources
 
 resource "google_compute_global_address" "istio_gateway_mci" {
   lifecycle {

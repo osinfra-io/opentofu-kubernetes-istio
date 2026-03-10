@@ -31,6 +31,8 @@ locals {
     "resources.requests.memory"                = var.gateway_memory_requests
   }
 
+  istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
+
   istio_gateway_datadog_apm_env = <<EOF
     {
     \"DD_ENV\":\"${module.helpers.environment}\"\,
