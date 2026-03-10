@@ -2,5 +2,5 @@
 # https://github.com/osinfra-io/pt-arche-core-helpers
 
 module "helpers" {
-  source = "github.com/osinfra-io/pt-arche-core-helpers//child?ref=bf324af8c32babb9cb27ac194caefe3f36ce3f30" # v0.1.3
+  source = "github.com/osinfra-io/pt-arche-core-helpers//child?ref=9734175404f3c0b26b0a58a6c877828dba2dea70" # v0.2.1
 }
