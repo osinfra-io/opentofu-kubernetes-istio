@@ -11,6 +11,7 @@ deploymentLabels:
 
 env:
   ENABLE_CA_SERVER: "false"
+  PILOT_ENABLE_IP_AUTOALLOCATE: "true"
 
 global:
   caAddress: cert-manager-istio-csr.cert-manager.svc:443
@@ -23,7 +24,6 @@ meshConfig:
     proxyMetadata:
       ECC_CURVE: "P256"
       ECC_SIGNATURE_ALGORITHM: "ECDSA"
-      ISTIO_META_DNS_AUTO_ALLOCATE: "true"
       ISTIO_META_DNS_CAPTURE: "true"
 
 podAnnotations:
