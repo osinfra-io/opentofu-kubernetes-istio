@@ -6,9 +6,6 @@
 
 OpenTofu **example** module that deploys the Istio service mesh on GKE using the official Helm charts (base, istiod, and gateway). It optionally provisions an Istio ingress gateway backed by a global static IP, Cloud Armor WAF/DDoS protection with adaptive rate limiting, and an SSL policy for TLS termination. Multi-cluster ingress (MCI) and multi-cluster service (MCS) resources are supported for cross-cluster traffic, and cert-manager integration is included for mTLS via an intermediate CA.
 
-> [!NOTE]
-> We do not recommend consuming this module like you might a [public module](https://search.opentofu.org). It is a baseline, something you can fork, potentially maintain, and modify to fit your organization's needs. Using public modules vs. writing your own has various [drivers and trade-offs](https://docs.osinfra.io/fundamentals/architecture-decision-records/adr-0003) that your organization should evaluate.
-
 ## 🔩 Usage
 
 > [!TIP]
