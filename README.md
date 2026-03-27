@@ -26,6 +26,9 @@ Google project services must be enabled before using this module. As a best prac
 
 Links to documentation and other resources required to develop and iterate in this repository successfully.
 
+- [cloud armor](https://cloud.google.com/armor/docs)
+- [cloud dns](https://cloud.google.com/dns/docs)
+- [google-managed certificates](https://cloud.google.com/load-balancing/docs/ssl-certificates/google-managed-certs)
 - [istio](https://istio.io/latest/docs)
   - [istio on gke](https://istio.io/latest/docs/setup/platform-setup/gke)
 
