@@ -7,14 +7,14 @@ resource "google_compute_global_address" "istio_gateway" {
   }
 
   labels  = var.labels
-  name    = "istio-gateway-${module.helpers.region}-${module.helpers.zone}"
+  name    = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
   project = var.project
 }
 
 # DNS Record Set Resource
 # https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/dns_record_set
 
-resource "google_dns_record_set" "istio_gateway" {
+resource "google_dns_record_set" "istio_gateways" {
   for_each = var.gateway_dns
 
   managed_zone = each.value.managed_zone
@@ -37,9 +37,6 @@ resource "helm_release" "base" {
   version = var.istio_version
 }
 
-# Helm Release
-# https://search.opentofu.org/provider/hashicorp/helm/latest/docs/resources/release
-
 resource "helm_release" "istiod" {
   depends_on = [
     helm_release.base
@@ -57,9 +54,6 @@ resource "helm_release" "istiod" {
 
   version = var.istio_version
 }
-
-# Helm Release
-# https://search.opentofu.org/provider/hashicorp/helm/latest/docs/resources/release
 
 resource "helm_release" "gateway" {
   depends_on = [
@@ -159,9 +153,6 @@ resource "kubernetes_manifest" "istio_gateway_backendconfig" {
   }
 }
 
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
-
 resource "kubernetes_manifest" "istio_gateway_frontendconfig" {
   lifecycle {
     enabled = var.enable_istio_gateway
@@ -183,9 +174,6 @@ resource "kubernetes_manifest" "istio_gateway_frontendconfig" {
   }
 }
 
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
-
 resource "kubernetes_manifest" "istio_gateway_managed_certificate" {
   lifecycle {
     enabled = var.enable_istio_gateway
@@ -203,9 +191,6 @@ resource "kubernetes_manifest" "istio_gateway_managed_certificate" {
     }
   }
 }
-
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
 resource "kubernetes_manifest" "istio_gateway_mcs" {
   lifecycle {
@@ -249,9 +234,6 @@ resource "kubernetes_manifest" "istio_gateway_mcs" {
     }
   }
 }
-
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
 resource "kubernetes_manifest" "istio_gateway_mci" {
   lifecycle {
@@ -299,9 +281,6 @@ resource "kubernetes_manifest" "istio_gateway_mci" {
   }
 }
 
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
-
 resource "kubernetes_manifest" "istio_gateway_ca_certificate" {
   lifecycle {
     enabled = var.enable_istio_gateway
@@ -342,9 +321,6 @@ resource "kubernetes_manifest" "istio_gateway_ca_certificate" {
   }
 }
 
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
-
 resource "kubernetes_manifest" "istio_gateway_tls" {
   lifecycle {
     enabled = var.enable_istio_gateway
@@ -384,9 +360,6 @@ resource "kubernetes_manifest" "istio_gateway_tls" {
     }
   }
 }
-
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
 resource "kubernetes_manifest" "istio_gateway_intermediate_ca_issuer" {
   lifecycle {
