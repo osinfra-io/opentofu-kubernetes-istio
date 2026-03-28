@@ -1,6 +1,26 @@
 # Kubernetes Manifest Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
+resource "kubernetes_manifest" "istio_authorization_policy" {
+  manifest = {
+    apiVersion = "security.istio.io/v1"
+    kind       = "AuthorizationPolicy"
+
+    metadata = {
+      name      = "deny-all"
+      namespace = "istio-system"
+    }
+
+    # It's recommended to define authorization policies following the default-deny pattern to enhance your cluster’s security posture.
+    # The spec field of the policy has the empty value {}. That value means that no traffic is permitted, effectively denying all requests.
+
+    spec = {}
+  }
+}
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
 resource "kubernetes_manifest" "istio_cluster_services_destination_rule" {
   manifest = {
     apiVersion = "networking.istio.io/v1beta1"
@@ -50,31 +70,6 @@ resource "kubernetes_manifest" "istio_cluster_services_destination_rule" {
           interval             = "10s"
           baseEjectionTime     = "30s"
           maxEjectionPercent   = 10
-        }
-      }
-    }
-  }
-}
-
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
-
-resource "kubernetes_manifest" "istio_kubernetes_default_destination_rule" {
-  manifest = {
-    apiVersion = "networking.istio.io/v1beta1"
-    kind       = "DestinationRule"
-
-    metadata = {
-      name      = "kubernetes-default"
-      namespace = "istio-system"
-    }
-
-    spec = {
-      host = "kubernetes.default.svc"
-
-      trafficPolicy = {
-        tls = {
-          mode = "DISABLE"
         }
       }
     }
@@ -163,6 +158,31 @@ resource "kubernetes_manifest" "istio_gateway_authorization_policy" {
 # Kubernetes Manifest Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
+resource "kubernetes_manifest" "istio_kubernetes_default_destination_rule" {
+  manifest = {
+    apiVersion = "networking.istio.io/v1beta1"
+    kind       = "DestinationRule"
+
+    metadata = {
+      name      = "kubernetes-default"
+      namespace = "istio-system"
+    }
+
+    spec = {
+      host = "kubernetes.default.svc"
+
+      trafficPolicy = {
+        tls = {
+          mode = "DISABLE"
+        }
+      }
+    }
+  }
+}
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
 resource "kubernetes_manifest" "istio_peer_authentication" {
   manifest = {
     apiVersion = "security.istio.io/v1beta1"
@@ -177,68 +197,6 @@ resource "kubernetes_manifest" "istio_peer_authentication" {
       mtls = {
         mode = "STRICT"
       }
-    }
-  }
-}
-
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
-
-resource "kubernetes_manifest" "istio_authorization_policy" {
-  manifest = {
-    apiVersion = "security.istio.io/v1"
-    kind       = "AuthorizationPolicy"
-
-    metadata = {
-      name      = "deny-all"
-      namespace = "istio-system"
-    }
-
-    # It's recommended to define authorization policies following the default-deny pattern to enhance your cluster’s security posture.
-    # The spec field of the policy has the empty value {}. That value means that no traffic is permitted, effectively denying all requests.
-
-    spec = {}
-  }
-}
-
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
-
-resource "kubernetes_manifest" "istio_virtual_services" {
-  for_each = merge(var.virtual_services, var.common_virtual_services)
-
-  manifest = {
-    apiVersion = "networking.istio.io/v1beta1"
-    kind       = "VirtualService"
-
-    metadata = {
-      name      = each.key
-      namespace = "istio-ingress"
-    }
-
-    spec = {
-      gateways = [
-        kubernetes_manifest.istio_gateway.manifest.metadata.name
-      ]
-
-      hosts = [
-        each.value.host
-      ]
-
-      http = [
-        {
-          route = [
-            {
-              destination = {
-                host = each.value.destination_host
-                port = {
-                  number = each.value.destination_port
-                }
-              }
-            }
-          ]
-        }
-      ]
     }
   }
 }
@@ -282,6 +240,48 @@ resource "kubernetes_manifest" "istio_test_istio_virtual_services" {
                 host = each.value.destination_host
                 port = {
                   number = 8080
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
+resource "kubernetes_manifest" "istio_virtual_services" {
+  for_each = merge(var.virtual_services, var.common_virtual_services)
+
+  manifest = {
+    apiVersion = "networking.istio.io/v1beta1"
+    kind       = "VirtualService"
+
+    metadata = {
+      name      = each.key
+      namespace = "istio-ingress"
+    }
+
+    spec = {
+      gateways = [
+        kubernetes_manifest.istio_gateway.manifest.metadata.name
+      ]
+
+      hosts = [
+        each.value.host
+      ]
+
+      http = [
+        {
+          route = [
+            {
+              destination = {
+                host = each.value.destination_host
+                port = {
+                  number = each.value.destination_port
                 }
               }
             }

@@ -1,30 +1,3 @@
-# Google Compute Global Address Resource
-# https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/compute_global_address
-
-resource "google_compute_global_address" "istio_gateway" {
-  lifecycle {
-    enabled = var.enable_istio_gateway
-  }
-
-  labels  = var.labels
-  name    = "istio-gateway-${module.helpers.region}-${module.helpers.zone}"
-  project = var.project
-}
-
-# DNS Record Set Resource
-# https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/dns_record_set
-
-resource "google_dns_record_set" "istio_gateway" {
-  for_each = var.gateway_dns
-
-  managed_zone = each.value.managed_zone
-  name         = "${each.key}."
-  project      = each.value.project
-  rrdatas      = [google_compute_global_address.istio_gateway.address]
-  ttl          = 300
-  type         = "A"
-}
-
 # Helm Release
 # https://search.opentofu.org/provider/hashicorp/helm/latest/docs/resources/release
 
@@ -33,27 +6,6 @@ resource "helm_release" "base" {
   name       = "base"
   namespace  = "istio-system"
   repository = var.chart_repository
-
-  version = var.istio_version
-}
-
-# Helm Release
-# https://search.opentofu.org/provider/hashicorp/helm/latest/docs/resources/release
-
-resource "helm_release" "istiod" {
-  depends_on = [
-    helm_release.base
-  ]
-
-  chart      = "istiod"
-  name       = "istiod"
-  namespace  = "istio-system"
-  repository = var.chart_repository
-  set        = local.istiod_helm_values
-
-  values = [
-    file("${path.module}/helm/istiod.yml")
-  ]
 
   version = var.istio_version
 }
@@ -81,6 +33,52 @@ resource "helm_release" "gateway" {
   ]
 
   version = var.istio_version
+}
+
+# Kubernetes Secret Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/secret_v1
+
+resource "kubernetes_secret_v1" "istio_cert_manager_ca" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  metadata {
+    name      = "cert-manager-ca"
+    namespace = "istio-ingress"
+  }
+
+  data = {
+    "tls.crt" = var.tls_self_signed_cert_cert_manager_root_cert
+    "tls.key" = var.tls_self_signed_cert_cert_manager_root_key
+  }
+}
+
+# Google Compute Global Address Resource
+# https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/compute_global_address
+
+resource "google_compute_global_address" "istio_gateway" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  labels  = var.labels
+  name    = "istio-gateway-${module.helpers.region}-${module.helpers.zone}"
+  project = var.project
+}
+
+# DNS Record Set Resource
+# https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/dns_record_set
+
+resource "google_dns_record_set" "istio_gateway" {
+  for_each = var.gateway_dns
+
+  managed_zone = each.value.managed_zone
+  name         = "${each.key}."
+  project      = each.value.project
+  rrdatas      = [google_compute_global_address.istio_gateway.address]
+  ttl          = 300
+  type         = "A"
 }
 
 # Kubernetes Ingress Resource
@@ -162,6 +160,49 @@ resource "kubernetes_manifest" "istio_gateway_backendconfig" {
 # Kubernetes Manifest Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
+resource "kubernetes_manifest" "istio_gateway_ca_certificate" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  manifest = {
+    apiVersion = "cert-manager.io/v1"
+    kind       = "Certificate"
+
+    metadata = {
+      name      = "istio-gateway-ca"
+      namespace = "istio-ingress"
+    }
+
+    spec = {
+      isCA = true
+
+      issuerRef = {
+        name  = kubernetes_manifest.istio_gateway_intermediate_ca_issuer.manifest.metadata.name
+        kind  = "Issuer"
+        group = "cert-manager.io"
+      }
+
+      commonName = "istio-gateway-intermediate-ca.osinfra.io"
+      duration   = "720h"
+
+      privateKey = {
+        algorithm = "ECDSA"
+        size      = 256
+      }
+
+      secretName = "istio-gateway-ca"
+
+      subject = {
+        organizations = ["Open Source Infrastructure (as Code) Istio Gateway Intermediate CA"]
+      }
+    }
+  }
+}
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
 resource "kubernetes_manifest" "istio_gateway_frontendconfig" {
   lifecycle {
     enabled = var.enable_istio_gateway
@@ -186,6 +227,31 @@ resource "kubernetes_manifest" "istio_gateway_frontendconfig" {
 # Kubernetes Manifest Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
+resource "kubernetes_manifest" "istio_gateway_intermediate_ca_issuer" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  manifest = {
+    apiVersion = "cert-manager.io/v1"
+    kind       = "Issuer"
+
+    metadata = {
+      name      = "istio-gateway-intermediate-ca"
+      namespace = "istio-ingress"
+    }
+
+    spec = {
+      ca = {
+        secretName = kubernetes_secret_v1.istio_cert_manager_ca.metadata[0].name
+      }
+    }
+  }
+}
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
 resource "kubernetes_manifest" "istio_gateway_managed_certificate" {
   lifecycle {
     enabled = var.enable_istio_gateway
@@ -200,52 +266,6 @@ resource "kubernetes_manifest" "istio_gateway_managed_certificate" {
     }
     spec = {
       domains = local.gateway_domains
-    }
-  }
-}
-
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
-
-resource "kubernetes_manifest" "istio_gateway_mcs" {
-  lifecycle {
-    enabled = var.enable_istio_gateway
-  }
-
-  manifest = {
-    apiVersion = "networking.gke.io/v1"
-    kind       = "MultiClusterService"
-
-    metadata = {
-      name      = "istio-gateway-mcs"
-      namespace = "istio-ingress"
-      annotations = {
-        "cloud.google.com/backend-config" = jsonencode({ "default" = "${kubernetes_manifest.istio_gateway_backendconfig.manifest.metadata.name}" })
-        "cloud.google.com/neg"            = jsonencode({ "ingress" = true })
-        "networking.gke.io/app-protocols" = jsonencode({ "https" = "HTTPS" })
-      }
-    }
-
-    spec = {
-      template = {
-        spec = {
-          selector = {
-            app   = "gateway"
-            istio = "gateway"
-          }
-
-          ports = [
-            {
-              name       = "https"
-              port       = 443
-              protocol   = "TCP"
-              targetPort = 443
-            }
-          ]
-        }
-      }
-
-      clusters = var.multi_cluster_service_clusters
     }
   }
 }
@@ -302,42 +322,45 @@ resource "kubernetes_manifest" "istio_gateway_mci" {
 # Kubernetes Manifest Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
-resource "kubernetes_manifest" "istio_gateway_ca_certificate" {
+resource "kubernetes_manifest" "istio_gateway_mcs" {
   lifecycle {
     enabled = var.enable_istio_gateway
   }
 
   manifest = {
-    apiVersion = "cert-manager.io/v1"
-    kind       = "Certificate"
+    apiVersion = "networking.gke.io/v1"
+    kind       = "MultiClusterService"
 
     metadata = {
-      name      = "istio-gateway-ca"
+      name      = "istio-gateway-mcs"
       namespace = "istio-ingress"
+      annotations = {
+        "cloud.google.com/backend-config" = jsonencode({ "default" = "${kubernetes_manifest.istio_gateway_backendconfig.manifest.metadata.name}" })
+        "cloud.google.com/neg"            = jsonencode({ "ingress" = true })
+        "networking.gke.io/app-protocols" = jsonencode({ "https" = "HTTPS" })
+      }
     }
 
     spec = {
-      isCA = true
+      template = {
+        spec = {
+          selector = {
+            app   = "gateway"
+            istio = "gateway"
+          }
 
-      issuerRef = {
-        name  = kubernetes_manifest.istio_gateway_intermediate_ca_issuer.manifest.metadata.name
-        kind  = "Issuer"
-        group = "cert-manager.io"
+          ports = [
+            {
+              name       = "https"
+              port       = 443
+              protocol   = "TCP"
+              targetPort = 443
+            }
+          ]
+        }
       }
 
-      commonName = "istio-gateway-intermediate-ca.osinfra.io"
-      duration   = "720h"
-
-      privateKey = {
-        algorithm = "ECDSA"
-        size      = 256
-      }
-
-      secretName = "istio-gateway-ca"
-
-      subject = {
-        organizations = ["Open Source Infrastructure (as Code) Istio Gateway Intermediate CA"]
-      }
+      clusters = var.multi_cluster_service_clusters
     }
   }
 }
@@ -385,46 +408,23 @@ resource "kubernetes_manifest" "istio_gateway_tls" {
   }
 }
 
-# Kubernetes Manifest Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+# Helm Release
+# https://search.opentofu.org/provider/hashicorp/helm/latest/docs/resources/release
 
-resource "kubernetes_manifest" "istio_gateway_intermediate_ca_issuer" {
-  lifecycle {
-    enabled = var.enable_istio_gateway
-  }
+resource "helm_release" "istiod" {
+  depends_on = [
+    helm_release.base
+  ]
 
-  manifest = {
-    apiVersion = "cert-manager.io/v1"
-    kind       = "Issuer"
+  chart      = "istiod"
+  name       = "istiod"
+  namespace  = "istio-system"
+  repository = var.chart_repository
+  set        = local.istiod_helm_values
 
-    metadata = {
-      name      = "istio-gateway-intermediate-ca"
-      namespace = "istio-ingress"
-    }
+  values = [
+    file("${path.module}/helm/istiod.yml")
+  ]
 
-    spec = {
-      ca = {
-        secretName = kubernetes_secret_v1.istio_cert_manager_ca.metadata[0].name
-      }
-    }
-  }
-}
-
-# Kubernetes Secret Resource
-# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/secret_v1
-
-resource "kubernetes_secret_v1" "istio_cert_manager_ca" {
-  lifecycle {
-    enabled = var.enable_istio_gateway
-  }
-
-  metadata {
-    name      = "cert-manager-ca"
-    namespace = "istio-ingress"
-  }
-
-  data = {
-    "tls.crt" = var.tls_self_signed_cert_cert_manager_root_cert
-    "tls.key" = var.tls_self_signed_cert_cert_manager_root_key
-  }
+  version = var.istio_version
 }
