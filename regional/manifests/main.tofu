@@ -56,6 +56,9 @@ resource "kubernetes_manifest" "istio_cluster_services_destination_rule" {
   }
 }
 
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
 resource "kubernetes_manifest" "istio_kubernetes_default_destination_rule" {
   manifest = {
     apiVersion = "networking.istio.io/v1beta1"
@@ -77,6 +80,9 @@ resource "kubernetes_manifest" "istio_kubernetes_default_destination_rule" {
     }
   }
 }
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
 resource "kubernetes_manifest" "istio_gateway" {
   manifest = {
@@ -118,6 +124,9 @@ resource "kubernetes_manifest" "istio_gateway" {
   }
 }
 
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
 resource "kubernetes_manifest" "istio_gateway_authorization_policy" {
   manifest = {
     apiVersion = "security.istio.io/v1"
@@ -151,6 +160,9 @@ resource "kubernetes_manifest" "istio_gateway_authorization_policy" {
   }
 }
 
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
 resource "kubernetes_manifest" "istio_peer_authentication" {
   manifest = {
     apiVersion = "security.istio.io/v1beta1"
@@ -169,6 +181,9 @@ resource "kubernetes_manifest" "istio_peer_authentication" {
   }
 }
 
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
 resource "kubernetes_manifest" "istio_authorization_policy" {
   manifest = {
     apiVersion = "security.istio.io/v1"
@@ -185,6 +200,9 @@ resource "kubernetes_manifest" "istio_authorization_policy" {
     spec = {}
   }
 }
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
 resource "kubernetes_manifest" "istio_virtual_services" {
   for_each = merge(var.virtual_services, var.common_virtual_services)
@@ -224,6 +242,9 @@ resource "kubernetes_manifest" "istio_virtual_services" {
     }
   }
 }
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
 
 resource "kubernetes_manifest" "istio_test_istio_virtual_services" {
   for_each = merge(var.istio_test_virtual_services, var.common_istio_test_virtual_services)
