@@ -13,7 +13,7 @@ locals {
 
   gateway_helm_values_map = {
     "autoscaling.minReplicas"                  = var.gateway_autoscale_min
-    "labels.tags\\.datadoghq\\.com/env"        = module.helpers.environment
+    "labels.tags\\.datadoghq\\.com/env"        = module.core_helpers.environment
     "labels.tags\\.datadoghq\\.com/version"    = var.istio_version
     "podAnnotations.apm\\.datadoghq\\.com/env" = local.istio_gateway_datadog_apm_env
     "podAnnotations.proxy\\.istio\\.io/config" = <<EOF
@@ -21,7 +21,7 @@ locals {
       datadog:
         address: $(HOST_IP):8126
     proxyMetadata:
-      DD_ENV: ${module.helpers.environment}
+      DD_ENV: ${module.core_helpers.environment}
       DD_SERVICE: istio-gateway
       DD_VERSION: ${var.istio_version}
     EOF
@@ -35,7 +35,7 @@ locals {
 
   istio_gateway_datadog_apm_env = <<EOF
     {
-    \"DD_ENV\":\"${module.helpers.environment}\"\,
+    \"DD_ENV\":\"${module.core_helpers.environment}\"\,
     \"DD_SERVICE\":\"istio-gateway\"\,
     \"DD_VERSION\":\"${var.istio_version}\"
     }
@@ -44,7 +44,7 @@ locals {
   istio_gateway_proxy_config = <<EOF
     {
     \"tracing\":{\"datadog\":{\"address\":\"$(HOST_IP):8126\"}}\,
-    \"proxyMetadata\":{\"DD_ENV\":\"${module.helpers.environment}\"\,
+    \"proxyMetadata\":{\"DD_ENV\":\"${module.core_helpers.environment}\"\,
     \"DD_SERVICE\":\"istio-gateway\"\,\"DD_VERSION\":\"${var.istio_version}\"\,
     \"ISTIO_META_DNS_AUTO_ALLOCATE\":\"true\"\,
     \"ISTIO_META_DNS_CAPTURE\":\"true\"\,
@@ -61,7 +61,7 @@ locals {
 
   istiod_helm_values_map = {
     "autoscaleMin"                                    = var.pilot_autoscale_min
-    "deploymentLabels.tags\\.datadoghq\\.com/env"     = module.helpers.environment
+    "deploymentLabels.tags\\.datadoghq\\.com/env"     = module.core_helpers.environment
     "deploymentLabels.tags\\.datadoghq\\.com/version" = var.istio_version
     "global.hub"                                      = "${var.artifact_registry}/istio"
     "global.multiCluster.clusterName"                 = local.multi_cluster_name
@@ -69,7 +69,7 @@ locals {
     "global.proxy.resources.limits.memory"            = var.proxy_memory_limits
     "global.proxy.resources.requests.cpu"             = var.proxy_cpu_requests
     "global.proxy.resources.requests.memory"          = var.proxy_memory_requests
-    "podLabels.tags\\.datadoghq\\.com/env"            = module.helpers.environment
+    "podLabels.tags\\.datadoghq\\.com/env"            = module.core_helpers.environment
     "podLabels.tags\\.datadoghq\\.com/version"        = var.istio_version
     "replicaCount"                                    = var.pilot_replica_count
     "resources.limits.cpu"                            = var.pilot_cpu_limits
@@ -78,5 +78,5 @@ locals {
     "resources.requests.memory"                       = var.pilot_memory_requests
   }
 
-  multi_cluster_name = module.helpers.zone != null ? "${var.cluster_prefix}-${module.helpers.region}-${module.helpers.zone}-${module.helpers.env}" : "${var.cluster_prefix}-${module.helpers.region}-${module.helpers.env}"
+  multi_cluster_name = module.core_helpers.zone != null ? "${var.cluster_prefix}-${module.core_helpers.region}-${module.core_helpers.zone}-${module.core_helpers.env}" : "${var.cluster_prefix}-${module.core_helpers.region}-${module.core_helpers.env}"
 }

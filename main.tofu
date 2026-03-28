@@ -141,8 +141,8 @@ resource "google_compute_ssl_policy" "istio_gateway" {
     enabled = var.gke_fleet_host_project_id == ""
   }
 
-  name            = "istio-gateway"
   min_tls_version = "TLS_1_2"
+  name            = "istio-gateway"
   profile         = "MODERN"
   project         = var.project
 }
@@ -150,7 +150,7 @@ resource "google_compute_ssl_policy" "istio_gateway" {
 # DNS Record Set Resource
 # https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/dns_record_set
 
-resource "google_dns_record_set" "istio_gateway_mci" {
+resource "google_dns_record_set" "istio_gateway_mcis" {
   for_each = var.gateway_dns
 
   managed_zone = each.value.managed_zone

@@ -18,97 +18,97 @@ locals {
     # A higher sensitivity level increases security, but also increases the risk of generating a false positive.
 
     {
-      name        = "sqli-v33-stable"
       action      = "deny(403)"
       description = "OWASP: SQL injection"
+      name        = "sqli-v33-stable"
       preview     = false
       priority    = 10000
       sensitivity = 1
     },
     {
-      name        = "xss-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Cross-site scripting"
+      name        = "xss-v33-stable"
       preview     = false
       priority    = 10010
       sensitivity = 1
     },
     {
-      name        = "lfi-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Local file inclusion"
+      name        = "lfi-v33-stable"
       preview     = false
       priority    = 10020
       sensitivity = 1
     },
     {
-      name        = "rfi-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Remote file inclusion"
+      name        = "rfi-v33-stable"
       preview     = false
       priority    = 10030
       sensitivity = 1
     },
     {
-      name        = "rce-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Remote code execution"
+      name        = "rce-v33-stable"
       preview     = false
       priority    = 10040
       sensitivity = 1
     },
     {
-      name        = "methodenforcement-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Method enforcement"
+      name        = "methodenforcement-v33-stable"
       preview     = false
       priority    = 10050
       sensitivity = 1
     },
     {
-      name        = "scannerdetection-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Scanner detection"
+      name        = "scannerdetection-v33-stable"
       preview     = false
       priority    = 10060
       sensitivity = 1
     },
     {
-      name        = "protocolattack-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Protocol attack"
+      name        = "protocolattack-v33-stable"
       preview     = false
       priority    = 10070
       sensitivity = 1
     },
     {
-      name        = "php-v33-stable"
       action      = "deny(403)"
       description = "OWASP: PHP injection attack"
+      name        = "php-v33-stable"
       preview     = false
       priority    = 10080
       sensitivity = 1
     },
     {
-      name        = "sessionfixation-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Session fixation"
+      name        = "sessionfixation-v33-stable"
       preview     = false
       priority    = 10090
       sensitivity = 1
     },
     {
-      name        = "java-v33-stable"
       action      = "deny(403)"
       description = "OWASP: Java attack"
+      name        = "java-v33-stable"
       preview     = false
       priority    = 10100
       sensitivity = 1
     },
     {
-      name        = "nodejs-v33-stable"
       action      = "deny(403)"
       description = "OWASP: NodeJS attack"
+      name        = "nodejs-v33-stable"
       preview     = false
       priority    = 10110
       sensitivity = 1
@@ -121,17 +121,17 @@ locals {
     # 942550-sqli JSON-formatted content vulnerability
 
     {
-      name        = "cve-canary"
       action      = "deny(403)"
       description = "Log4j vulnerability"
+      name        = "cve-canary"
       preview     = false
       priority    = 10120
       sensitivity = 1
     },
     {
-      name        = "json-sqli-canary"
       action      = "deny(403)"
       description = "JSON-based SQL injection bypass vulnerability"
+      name        = "json-sqli-canary"
       preview     = false
       priority    = 10130
       sensitivity = 1

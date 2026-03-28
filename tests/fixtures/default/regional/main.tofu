@@ -15,6 +15,9 @@ terraform {
   }
 }
 
+# Kubernetes Istio
+# https://github.com/osinfra-io/pt-arche-kubernetes-istio
+
 module "test" {
   source = "../../../../regional"
 
