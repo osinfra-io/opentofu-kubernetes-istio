@@ -7,7 +7,7 @@ resource "google_compute_global_address" "istio_gateway" {
   }
 
   labels  = var.labels
-  name    = "istio-gateway-${module.helpers.region}"
+  name    = "istio-gateway-${module.helpers.region}-${module.helpers.zone}"
   project = var.project
 }
 
