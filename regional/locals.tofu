@@ -41,6 +41,8 @@ locals {
     }
   EOF
 
+  istio_gateway_name = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
+
   istio_gateway_proxy_config = <<EOF
     {
     \"tracing\":{\"datadog\":{\"address\":\"$(HOST_IP):8126\"}}\,

@@ -73,21 +73,23 @@ resource "google_compute_security_policy" "istio_gateway" {
   project = var.project
 
   rule {
-    action   = "throttle"
-    preview  = false
-    priority = "30000"
+    action      = "throttle"
+    description = "Rate limit all user IPs"
 
     match {
-      versioned_expr = "SRC_IPS_V1"
-
       config {
         src_ip_ranges = ["*"]
       }
+
+      versioned_expr = "SRC_IPS_V1"
     }
 
+    preview  = false
+    priority = "30000"
+
     rate_limit_options {
-      enforce_on_key = "ALL"
       conform_action = "allow"
+      enforce_on_key = "ALL"
       exceed_action  = "deny(429)"
 
       rate_limit_threshold {
@@ -95,8 +97,6 @@ resource "google_compute_security_policy" "istio_gateway" {
         interval_sec = "60"
       }
     }
-
-    description = "Rate limit all user IPs"
   }
 
   rule {
@@ -104,11 +104,11 @@ resource "google_compute_security_policy" "istio_gateway" {
     description = "Default allow rule"
 
     match {
-      versioned_expr = "SRC_IPS_V1"
-
       config {
         src_ip_ranges = ["*"]
       }
+
+      versioned_expr = "SRC_IPS_V1"
     }
 
     priority = "2147483647" # Use the maximum allowed priority value to ensure this is the default rule
@@ -127,8 +127,8 @@ resource "google_compute_security_policy" "istio_gateway" {
         }
       }
 
-      priority = rule.value.priority
       preview  = rule.value.preview
+      priority = rule.value.priority
     }
   }
 }
