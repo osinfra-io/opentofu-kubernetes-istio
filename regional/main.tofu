@@ -7,7 +7,7 @@ resource "google_compute_global_address" "istio_gateway" {
   }
 
   labels  = var.labels
-  name    = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
+  name    = local.istio_gateway_name
   project = var.project
 }
 
@@ -37,24 +37,6 @@ resource "helm_release" "base" {
   version = var.istio_version
 }
 
-resource "helm_release" "istiod" {
-  depends_on = [
-    helm_release.base
-  ]
-
-  chart      = "istiod"
-  name       = "istiod"
-  namespace  = "istio-system"
-  repository = var.chart_repository
-  set        = local.istiod_helm_values
-
-  values = [
-    file("${path.module}/helm/istiod.yml")
-  ]
-
-  version = var.istio_version
-}
-
 resource "helm_release" "gateway" {
   depends_on = [
     helm_release.istiod
@@ -72,6 +54,24 @@ resource "helm_release" "gateway" {
 
   values = [
     file("${path.module}/helm/gateway.yml")
+  ]
+
+  version = var.istio_version
+}
+
+resource "helm_release" "istiod" {
+  depends_on = [
+    helm_release.base
+  ]
+
+  chart      = "istiod"
+  name       = "istiod"
+  namespace  = "istio-system"
+  repository = var.chart_repository
+  set        = local.istiod_helm_values
+
+  values = [
+    file("${path.module}/helm/istiod.yml")
   ]
 
   version = var.istio_version
@@ -153,6 +153,45 @@ resource "kubernetes_manifest" "istio_gateway_backendconfig" {
   }
 }
 
+resource "kubernetes_manifest" "istio_gateway_ca_certificate" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  manifest = {
+    apiVersion = "cert-manager.io/v1"
+    kind       = "Certificate"
+
+    metadata = {
+      name      = "istio-gateway-ca"
+      namespace = "istio-ingress"
+    }
+
+    spec = {
+      commonName = "istio-gateway-intermediate-ca.osinfra.io"
+      duration   = "720h"
+      isCA       = true
+
+      issuerRef = {
+        group = "cert-manager.io"
+        kind  = "Issuer"
+        name  = kubernetes_manifest.istio_gateway_intermediate_ca_issuer.manifest.metadata.name
+      }
+
+      privateKey = {
+        algorithm = "ECDSA"
+        size      = 256
+      }
+
+      secretName = "istio-gateway-ca"
+
+      subject = {
+        organizations = ["Open Source Infrastructure (as Code) Istio Gateway Intermediate CA"]
+      }
+    }
+  }
+}
+
 resource "kubernetes_manifest" "istio_gateway_frontendconfig" {
   lifecycle {
     enabled = var.enable_istio_gateway
@@ -166,9 +205,31 @@ resource "kubernetes_manifest" "istio_gateway_frontendconfig" {
       namespace = "istio-ingress"
     }
     spec = {
-      sslPolicy = "istio-gateway"
       redirectToHttps = {
         enabled = true
+      }
+      sslPolicy = "istio-gateway"
+    }
+  }
+}
+
+resource "kubernetes_manifest" "istio_gateway_intermediate_ca_issuer" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  manifest = {
+    apiVersion = "cert-manager.io/v1"
+    kind       = "Issuer"
+
+    metadata = {
+      name      = "istio-gateway-intermediate-ca"
+      namespace = "istio-ingress"
+    }
+
+    spec = {
+      ca = {
+        secretName = kubernetes_secret_v1.istio_cert_manager_ca.metadata[0].name
       }
     }
   }
@@ -192,49 +253,6 @@ resource "kubernetes_manifest" "istio_gateway_managed_certificate" {
   }
 }
 
-resource "kubernetes_manifest" "istio_gateway_mcs" {
-  lifecycle {
-    enabled = var.enable_istio_gateway
-  }
-
-  manifest = {
-    apiVersion = "networking.gke.io/v1"
-    kind       = "MultiClusterService"
-
-    metadata = {
-      name      = "istio-gateway-mcs"
-      namespace = "istio-ingress"
-      annotations = {
-        "cloud.google.com/backend-config" = jsonencode({ "default" = "${kubernetes_manifest.istio_gateway_backendconfig.manifest.metadata.name}" })
-        "cloud.google.com/neg"            = jsonencode({ "ingress" = true })
-        "networking.gke.io/app-protocols" = jsonencode({ "https" = "HTTPS" })
-      }
-    }
-
-    spec = {
-      template = {
-        spec = {
-          selector = {
-            app   = "gateway"
-            istio = "gateway"
-          }
-
-          ports = [
-            {
-              name       = "https"
-              port       = 443
-              protocol   = "TCP"
-              targetPort = 443
-            }
-          ]
-        }
-      }
-
-      clusters = var.multi_cluster_service_clusters
-    }
-  }
-}
-
 resource "kubernetes_manifest" "istio_gateway_mci" {
   lifecycle {
     enabled = var.enable_istio_gateway
@@ -245,13 +263,13 @@ resource "kubernetes_manifest" "istio_gateway_mci" {
     kind       = "MultiClusterIngress"
 
     metadata = {
-      name      = "istio-gateway-mci"
-      namespace = "istio-ingress"
       annotations = {
         "networking.gke.io/frontend-config"  = kubernetes_manifest.istio_gateway_frontendconfig.manifest.metadata.name
         "networking.gke.io/pre-shared-certs" = "istio-gateway-mci"
         "networking.gke.io/static-ip"        = var.gateway_mci_global_address
       }
+      name      = "istio-gateway-mci"
+      namespace = "istio-ingress"
     }
 
     spec = {
@@ -281,42 +299,45 @@ resource "kubernetes_manifest" "istio_gateway_mci" {
   }
 }
 
-resource "kubernetes_manifest" "istio_gateway_ca_certificate" {
+resource "kubernetes_manifest" "istio_gateway_mcs" {
   lifecycle {
     enabled = var.enable_istio_gateway
   }
 
   manifest = {
-    apiVersion = "cert-manager.io/v1"
-    kind       = "Certificate"
+    apiVersion = "networking.gke.io/v1"
+    kind       = "MultiClusterService"
 
     metadata = {
-      name      = "istio-gateway-ca"
+      annotations = {
+        "cloud.google.com/backend-config" = jsonencode({ "default" = "${kubernetes_manifest.istio_gateway_backendconfig.manifest.metadata.name}" })
+        "cloud.google.com/neg"            = jsonencode({ "ingress" = true })
+        "networking.gke.io/app-protocols" = jsonencode({ "https" = "HTTPS" })
+      }
+      name      = "istio-gateway-mcs"
       namespace = "istio-ingress"
     }
 
     spec = {
-      isCA = true
+      template = {
+        spec = {
+          selector = {
+            app   = "gateway"
+            istio = "gateway"
+          }
 
-      issuerRef = {
-        name  = kubernetes_manifest.istio_gateway_intermediate_ca_issuer.manifest.metadata.name
-        kind  = "Issuer"
-        group = "cert-manager.io"
+          ports = [
+            {
+              name       = "https"
+              port       = 443
+              protocol   = "TCP"
+              targetPort = 443
+            }
+          ]
+        }
       }
 
-      commonName = "istio-gateway-intermediate-ca.osinfra.io"
-      duration   = "720h"
-
-      privateKey = {
-        algorithm = "ECDSA"
-        size      = 256
-      }
-
-      secretName = "istio-gateway-ca"
-
-      subject = {
-        organizations = ["Open Source Infrastructure (as Code) Istio Gateway Intermediate CA"]
-      }
+      clusters = var.multi_cluster_service_clusters
     }
   }
 }
@@ -342,9 +363,9 @@ resource "kubernetes_manifest" "istio_gateway_tls" {
       isCA       = false
 
       issuerRef = {
-        name  = kubernetes_manifest.istio_gateway_intermediate_ca_issuer.manifest.metadata.name
-        kind  = "Issuer"
         group = "cert-manager.io"
+        kind  = "Issuer"
+        name  = kubernetes_manifest.istio_gateway_intermediate_ca_issuer.manifest.metadata.name
       }
 
       privateKey = {
@@ -356,28 +377,6 @@ resource "kubernetes_manifest" "istio_gateway_tls" {
 
       subject = {
         organizations = ["Open Source Infrastructure (as Code) Istio Gateway"]
-      }
-    }
-  }
-}
-
-resource "kubernetes_manifest" "istio_gateway_intermediate_ca_issuer" {
-  lifecycle {
-    enabled = var.enable_istio_gateway
-  }
-
-  manifest = {
-    apiVersion = "cert-manager.io/v1"
-    kind       = "Issuer"
-
-    metadata = {
-      name      = "istio-gateway-intermediate-ca"
-      namespace = "istio-ingress"
-    }
-
-    spec = {
-      ca = {
-        secretName = kubernetes_secret_v1.istio_cert_manager_ca.metadata[0].name
       }
     }
   }
