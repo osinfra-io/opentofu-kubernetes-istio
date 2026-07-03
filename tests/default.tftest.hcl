@@ -54,5 +54,5 @@ run "default_regional" {
 }
 
 variables {
-  project     = "mock-project"
+  project = "mock-project"
 }
