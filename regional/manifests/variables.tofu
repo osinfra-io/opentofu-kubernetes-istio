@@ -1,20 +1,23 @@
 # Input Variables
 # https://opentofu.org/docs/language/values/variables
 
-variable "common_istio_test_virtual_services" {
-  description = "The map of Istio VirtualServices to create for Istio testing, that are common among all regions"
+variable "common_istio_test_routes" {
+  description = "The map of HTTPRoutes to create for Istio testing, that are common among all regions"
   type = map(object({
-    destination_host = string
-    host             = string
+    backend_namespace = string
+    backend_port      = optional(number, 8080)
+    backend_service   = string
+    host              = string
   }))
 }
 
-variable "common_virtual_services" {
-  description = "The map of Istio VirtualServices to create, that are common among all regions"
+variable "common_routes" {
+  description = "The map of HTTPRoutes to create, that are common among all regions"
   type = map(object({
-    destination_host = string
-    destination_port = optional(number, 8080)
-    host             = string
+    backend_namespace = string
+    backend_port      = optional(number, 8080)
+    backend_service   = string
+    host              = string
   }))
 }
 
@@ -30,19 +33,22 @@ variable "failover_to_region" {
   default     = ""
 }
 
-variable "istio_test_virtual_services" {
-  description = "The map of Istio VirtualServices to create for Istio testing"
+variable "istio_test_routes" {
+  description = "The map of HTTPRoutes to create for Istio testing"
   type = map(object({
-    destination_host = string
-    host             = string
+    backend_namespace = string
+    backend_port      = optional(number, 8080)
+    backend_service   = string
+    host              = string
   }))
 }
 
-variable "virtual_services" {
-  description = "The map of Istio VirtualServices to create, that are unique to a region"
+variable "routes" {
+  description = "The map of HTTPRoutes to create, that are unique to a region"
   type = map(object({
-    destination_host = string
-    destination_port = optional(number, 8080)
-    host             = string
+    backend_namespace = string
+    backend_port      = optional(number, 8080)
+    backend_service   = string
+    host              = string
   }))
 }

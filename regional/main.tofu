@@ -37,28 +37,6 @@ resource "helm_release" "base" {
   version = var.istio_version
 }
 
-resource "helm_release" "gateway" {
-  depends_on = [
-    helm_release.istiod
-  ]
-
-  lifecycle {
-    enabled = var.enable_istio_gateway
-  }
-
-  chart      = "gateway"
-  name       = "gateway"
-  namespace  = "istio-ingress"
-  repository = var.chart_repository
-  set        = local.gateway_helm_values
-
-  values = [
-    file("${path.module}/helm/gateway.yml")
-  ]
-
-  version = var.istio_version
-}
-
 resource "helm_release" "istiod" {
   depends_on = [
     helm_release.base
@@ -77,12 +55,38 @@ resource "helm_release" "istiod" {
   version = var.istio_version
 }
 
+# Kubernetes Config Map Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/config_map_v1
+
+# Strategic-merge patches applied by istiod to the auto-provisioned gateway data plane. Ports
+# the resources, autoscaling, disruption budget, tolerations, topology spread, and Datadog pod
+# annotations that were previously set on the Helm gateway release, plus the NodePort Service
+# type required by the GKE NEG/MCS ingress path.
+
+resource "kubernetes_config_map_v1" "istio_gateway_options" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  metadata {
+    name      = "gateway-options"
+    namespace = "istio-ingress"
+  }
+
+  data = {
+    deployment              = local.istio_gateway_deployment_patch
+    horizontalPodAutoscaler = local.istio_gateway_hpa_patch
+    podDisruptionBudget     = local.istio_gateway_pdb_patch
+    service                 = local.istio_gateway_service_patch
+  }
+}
+
 # Kubernetes Ingress Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/ingress_v1
 
 resource "kubernetes_ingress_v1" "istio_gateway" {
   depends_on = [
-    helm_release.gateway
+    kubernetes_manifest.istio_gateway
   ]
 
   lifecycle {
@@ -107,7 +111,7 @@ resource "kubernetes_ingress_v1" "istio_gateway" {
         path {
           backend {
             service {
-              name = "gateway"
+              name = "gateway-istio"
               port {
                 number = 443
               }
@@ -119,6 +123,81 @@ resource "kubernetes_ingress_v1" "istio_gateway" {
   }
 
   wait_for_load_balancer = true
+}
+
+# Kubernetes Manifest Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
+resource "kubernetes_manifest" "istio_gateway" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "Gateway"
+
+    metadata = {
+      name      = "gateway"
+      namespace = "istio-ingress"
+    }
+
+    spec = {
+      gatewayClassName = "istio"
+
+      # istiod provisions the data plane Deployment/Service (named gateway-istio) from this
+      # Gateway. Datadog labels and the GKE Service annotations are copied onto the generated
+      # resources via infrastructure; the parametersRef ConfigMap carries the strategic-merge
+      # patches for the Service (NodePort), Deployment, HPA, and PodDisruptionBudget.
+
+      infrastructure = {
+        annotations = {
+          "cloud.google.com/app-protocols"  = jsonencode({ "https" = "HTTPS" })
+          "cloud.google.com/backend-config" = jsonencode({ "default" = "istio-gateway-backend" })
+          "cloud.google.com/neg"            = jsonencode({ "ingress" = true })
+        }
+
+        labels = {
+          "tags.datadoghq.com/env"     = module.core_helpers.environment
+          "tags.datadoghq.com/service" = "istio-gateway"
+          "tags.datadoghq.com/source"  = "envoy"
+          "tags.datadoghq.com/version" = var.istio_version
+        }
+
+        parametersRef = {
+          group = ""
+          kind  = "ConfigMap"
+          name  = kubernetes_config_map_v1.istio_gateway_options.metadata[0].name
+        }
+      }
+
+      listeners = [
+        {
+          allowedRoutes = {
+            namespaces = {
+              from = "All"
+            }
+          }
+
+          hostname = "*"
+          name     = "https"
+          port     = 443
+          protocol = "HTTPS"
+
+          tls = {
+            certificateRefs = [
+              {
+                kind = "Secret"
+                name = "istio-gateway-tls"
+              }
+            ]
+
+            mode = "Terminate"
+          }
+        }
+      ]
+    }
+  }
 }
 
 # Kubernetes Manifest Resource
@@ -322,8 +401,7 @@ resource "kubernetes_manifest" "istio_gateway_mcs" {
       template = {
         spec = {
           selector = {
-            app   = "gateway"
-            istio = "gateway"
+            "gateway.networking.k8s.io/gateway-name" = "gateway"
           }
 
           ports = [

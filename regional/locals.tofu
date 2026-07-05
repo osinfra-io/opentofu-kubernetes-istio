@@ -4,55 +4,130 @@
 locals {
   gateway_domains = keys(var.gateway_dns)
 
-  gateway_helm_values = [
-    for k, v in local.gateway_helm_values_map : {
-      name  = k
-      value = v
-    }
-  ]
-
-  gateway_helm_values_map = {
-    "autoscaling.minReplicas"                  = var.gateway_autoscale_min
-    "labels.tags\\.datadoghq\\.com/env"        = module.core_helpers.environment
-    "labels.tags\\.datadoghq\\.com/version"    = var.istio_version
-    "podAnnotations.apm\\.datadoghq\\.com/env" = local.istio_gateway_datadog_apm_env
-    "podAnnotations.proxy\\.istio\\.io/config" = <<EOF
-    tracing:
-      datadog:
-        address: $(HOST_IP):8126
-    proxyMetadata:
-      DD_ENV: ${module.core_helpers.environment}
-      DD_SERVICE: istio-gateway
-      DD_VERSION: ${var.istio_version}
-    EOF
-    "resources.limits.cpu"                     = var.gateway_cpu_limits
-    "resources.limits.memory"                  = var.gateway_memory_limits
-    "resources.requests.cpu"                   = var.gateway_cpu_requests
-    "resources.requests.memory"                = var.gateway_memory_requests
-  }
-
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
 
-  istio_gateway_datadog_apm_env = <<EOF
-    {
-    \"DD_ENV\":\"${module.core_helpers.environment}\"\,
-    \"DD_SERVICE\":\"istio-gateway\"\,
-    \"DD_VERSION\":\"${var.istio_version}\"
+  # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway
+  # container "istio-proxy". Ports the resources, tolerations, topology spread, and Datadog
+  # pod annotations (autodiscovery, APM env, and Istio proxy tracing config) that were set on
+  # the Helm gateway release.
+  istio_gateway_deployment_patch = yamlencode({
+    spec = {
+      template = {
+        metadata = {
+          annotations = {
+            "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
+            "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
+            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15020/stats/prometheus\"\n  }\n]\n"
+            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
+
+            "apm.datadoghq.com/env" = jsonencode({
+              DD_ENV     = module.core_helpers.environment
+              DD_SERVICE = "istio-gateway"
+              DD_VERSION = var.istio_version
+            })
+
+            "proxy.istio.io/config" = yamlencode({
+              proxyMetadata = {
+                DD_ENV     = module.core_helpers.environment
+                DD_SERVICE = "istio-gateway"
+                DD_VERSION = var.istio_version
+              }
+
+              tracing = {
+                datadog = {
+                  address = "$(HOST_IP):8126"
+                }
+              }
+            })
+          }
+        }
+
+        spec = {
+          containers = [
+            {
+              name = "istio-proxy"
+
+              resources = {
+                limits = {
+                  cpu    = var.gateway_cpu_limits
+                  memory = var.gateway_memory_limits
+                }
+
+                requests = {
+                  cpu    = var.gateway_cpu_requests
+                  memory = var.gateway_memory_requests
+                }
+              }
+            }
+          ]
+
+          tolerations = [
+            {
+              effect = "NoExecute"
+              key    = "dedicated"
+              value  = "gateway"
+            }
+          ]
+
+          topologySpreadConstraints = [
+            {
+              labelSelector = {
+                matchLabels = {
+                  "gateway.networking.k8s.io/gateway-name" = "gateway"
+                }
+              }
+
+              maxSkew           = 1
+              topologyKey       = "topology.kubernetes.io/zone"
+              whenUnsatisfiable = "ScheduleAnyway"
+            }
+          ]
+        }
+      }
     }
-  EOF
+  })
+
+  # Strategic-merge patch creating a HorizontalPodAutoscaler for the generated gateway
+  # Deployment (istiod wires the scaleTargetRef automatically).
+  istio_gateway_hpa_patch = yamlencode({
+    spec = {
+      maxReplicas = 5
+
+      metrics = [
+        {
+          resource = {
+            name = "cpu"
+
+            target = {
+              averageUtilization = 85
+              type               = "Utilization"
+            }
+          }
+
+          type = "Resource"
+        }
+      ]
+
+      minReplicas = var.gateway_autoscale_min
+    }
+  })
+
+  # Strategic-merge patch creating a PodDisruptionBudget for the generated gateway Deployment.
+  istio_gateway_pdb_patch = yamlencode({
+    spec = {
+      maxUnavailable = 1
+    }
+  })
+
+  # Strategic-merge patch setting the generated gateway Service type to NodePort, required by
+  # the GKE NEG/MultiClusterIngress path (the default is LoadBalancer).
+  istio_gateway_service_patch = yamlencode({
+    spec = {
+      type = "NodePort"
+    }
+  })
 
   istio_gateway_name = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
-
-  istio_gateway_proxy_config = <<EOF
-    {
-    \"tracing\":{\"datadog\":{\"address\":\"$(HOST_IP):8126\"}}\,
-    \"proxyMetadata\":{\"DD_ENV\":\"${module.core_helpers.environment}\"\,
-    \"DD_SERVICE\":\"istio-gateway\"\,\"DD_VERSION\":\"${var.istio_version}\"\,
-    \"ISTIO_META_DNS_AUTO_ALLOCATE\":\"true\"\,
-    \"ISTIO_META_DNS_CAPTURE\":\"true\"\,
-    \"meshId\":\"default\"
-    }
-  EOF
 
   istiod_helm_values = [
     for k, v in local.istiod_helm_values_map : {
