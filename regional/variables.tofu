@@ -24,6 +24,12 @@ variable "enable_istio_gateway" {
   default     = false
 }
 
+variable "gateway_autoscale_max" {
+  description = "The maximum number of gateway replicas to run"
+  type        = number
+  default     = 5
+}
+
 variable "gateway_autoscale_min" {
   description = "The minimum number of gateway replicas to run"
   type        = number

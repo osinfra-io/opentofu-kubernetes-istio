@@ -91,7 +91,7 @@ locals {
   # Deployment (istiod wires the scaleTargetRef automatically).
   istio_gateway_hpa_patch = yamlencode({
     spec = {
-      maxReplicas = 5
+      maxReplicas = var.gateway_autoscale_max
 
       metrics = [
         {
