@@ -55,6 +55,51 @@ resource "helm_release" "istiod" {
   version = var.istio_version
 }
 
+# Kubernetes Cluster Role Binding Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/cluster_role_binding_v1
+
+resource "kubernetes_cluster_role_binding_v1" "istio_reader_gateway_api" {
+  depends_on = [
+    helm_release.istiod,
+    kubernetes_cluster_role_v1.istio_reader_gateway_api
+  ]
+
+  metadata {
+    name = "istio-reader-gateway-api"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "istio-reader-gateway-api"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "istio-reader-service-account"
+    namespace = "istio-system"
+  }
+}
+
+# Kubernetes Cluster Role Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/cluster_role_v1
+
+resource "kubernetes_cluster_role_v1" "istio_reader_gateway_api" {
+  depends_on = [
+    helm_release.istiod
+  ]
+
+  metadata {
+    name = "istio-reader-gateway-api"
+  }
+
+  rule {
+    api_groups = ["gateway.networking.k8s.io"]
+    resources  = ["grpcroutes", "httproutes", "referencegrants", "tcproutes", "tlsroutes"]
+    verbs      = ["get", "list", "watch"]
+  }
+}
+
 # Kubernetes Config Map Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/config_map_v1
 
