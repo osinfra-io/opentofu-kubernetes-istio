@@ -109,6 +109,10 @@ resource "kubernetes_cluster_role_v1" "istio_reader_gateway_api" {
 # type required by the GKE NEG/MCS ingress path.
 
 resource "kubernetes_config_map_v1" "istio_gateway_options" {
+  depends_on = [
+    kubernetes_namespace_v1.istio_ingress
+  ]
+
   lifecycle {
     enabled = var.enable_istio_gateway
   }
@@ -501,6 +505,23 @@ resource "kubernetes_manifest" "istio_gateway_tls" {
         organizations = ["Open Source Infrastructure (as Code) Istio Gateway"]
       }
     }
+  }
+}
+
+# Kubernetes Namespace Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/namespace_v1
+
+resource "kubernetes_namespace_v1" "istio_ingress" {
+  lifecycle {
+    enabled = var.enable_istio_gateway
+  }
+
+  metadata {
+    labels = merge(var.labels, {
+      "istio-injection" = "enabled"
+    })
+
+    name = "istio-ingress"
   }
 }
 
