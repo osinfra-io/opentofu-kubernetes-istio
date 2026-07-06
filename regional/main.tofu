@@ -179,7 +179,6 @@ resource "kubernetes_manifest" "istio_gateway" {
             }
           }
 
-          hostname = "*"
           name     = "https"
           port     = 443
           protocol = "HTTPS"
