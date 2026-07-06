@@ -73,46 +73,6 @@ resource "kubernetes_manifest" "istio_cluster_services_destination_rule" {
   }
 }
 
-resource "kubernetes_manifest" "istio_gateway" {
-  manifest = {
-    apiVersion = "networking.istio.io/v1beta1"
-    kind       = "Gateway"
-
-    metadata = {
-      name      = "global"
-      namespace = "istio-ingress"
-    }
-
-    spec = {
-      selector = {
-        istio = "gateway"
-      }
-
-      servers = [
-        {
-          hosts = [
-            "*"
-          ]
-
-          port = {
-            name     = "https"
-            number   = 443
-            protocol = "HTTPS"
-          }
-
-          tls = {
-
-            # As part of the incoming TLS connection, the gateway will decrypt the traffic in order to apply the routing rules.
-
-            mode           = "SIMPLE"
-            credentialName = "istio-gateway-tls"
-          }
-        }
-      ]
-    }
-  }
-}
-
 resource "kubernetes_manifest" "istio_gateway_authorization_policy" {
   manifest = {
     apiVersion = "security.istio.io/v1"
@@ -137,11 +97,56 @@ resource "kubernetes_manifest" "istio_gateway_authorization_policy" {
         }
       ]
 
-      selector = {
-        matchLabels = {
-          istio = "gateway"
+      # Attach to the Gateway API Gateway (auto-provisioned data plane) via targetRefs rather
+      # than a pod label selector.
+
+      targetRefs = [
+        {
+          group = "gateway.networking.k8s.io"
+          kind  = "Gateway"
+          name  = "gateway"
         }
-      }
+      ]
+    }
+  }
+}
+
+resource "kubernetes_manifest" "istio_http_routes" {
+  for_each = local.routes_merged
+
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "HTTPRoute"
+
+    metadata = {
+      name      = each.key
+      namespace = "istio-ingress"
+    }
+
+    spec = {
+      hostnames = [
+        each.value.host
+      ]
+
+      parentRefs = [
+        {
+          group = "gateway.networking.k8s.io"
+          kind  = "Gateway"
+          name  = "gateway"
+        }
+      ]
+
+      rules = [
+        {
+          backendRefs = [
+            {
+              name      = each.value.backend_service
+              namespace = each.value.backend_namespace
+              port      = each.value.backend_port
+            }
+          ]
+        }
+      ]
     }
   }
 }
@@ -186,58 +191,43 @@ resource "kubernetes_manifest" "istio_peer_authentication" {
   }
 }
 
-resource "kubernetes_manifest" "istio_test_istio_virtual_services" {
-  for_each = local.istio_test_virtual_services_merged
+resource "kubernetes_manifest" "istio_route_reference_grants" {
+  for_each = local.route_backend_namespaces
 
   manifest = {
-    apiVersion = "networking.istio.io/v1beta1"
-    kind       = "VirtualService"
+    apiVersion = "gateway.networking.k8s.io/v1beta1"
+    kind       = "ReferenceGrant"
+
     metadata = {
-      name      = each.key
-      namespace = "istio-ingress"
+      name      = "istio-ingress-routes"
+      namespace = each.value
     }
 
     spec = {
-      gateways = [
-        kubernetes_manifest.istio_gateway.manifest.metadata.name
-      ]
-
-      hosts = [
-        each.value.host
-      ]
-
-      http = [
+      from = [
         {
-          match = [
-            {
-              uri = {
-                prefix = "/istio-test"
-              }
-            }
-          ]
+          group     = "gateway.networking.k8s.io"
+          kind      = "HTTPRoute"
+          namespace = "istio-ingress"
+        }
+      ]
 
-          route = [
-            {
-              destination = {
-                host = each.value.destination_host
-                port = {
-                  number = 8080
-                }
-              }
-            }
-          ]
+      to = [
+        {
+          group = ""
+          kind  = "Service"
         }
       ]
     }
   }
 }
 
-resource "kubernetes_manifest" "istio_virtual_services" {
-  for_each = local.virtual_services_merged
+resource "kubernetes_manifest" "istio_test_http_routes" {
+  for_each = local.istio_test_routes_merged
 
   manifest = {
-    apiVersion = "networking.istio.io/v1beta1"
-    kind       = "VirtualService"
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "HTTPRoute"
 
     metadata = {
       name      = each.key
@@ -245,23 +235,33 @@ resource "kubernetes_manifest" "istio_virtual_services" {
     }
 
     spec = {
-      gateways = [
-        kubernetes_manifest.istio_gateway.manifest.metadata.name
-      ]
-
-      hosts = [
+      hostnames = [
         each.value.host
       ]
 
-      http = [
+      parentRefs = [
         {
-          route = [
+          group = "gateway.networking.k8s.io"
+          kind  = "Gateway"
+          name  = "gateway"
+        }
+      ]
+
+      rules = [
+        {
+          backendRefs = [
             {
-              destination = {
-                host = each.value.destination_host
-                port = {
-                  number = each.value.destination_port
-                }
+              name      = each.value.backend_service
+              namespace = each.value.backend_namespace
+              port      = each.value.backend_port
+            }
+          ]
+
+          matches = [
+            {
+              path = {
+                type  = "PathPrefix"
+                value = "/istio-test"
               }
             }
           ]

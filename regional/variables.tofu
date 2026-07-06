@@ -24,6 +24,12 @@ variable "enable_istio_gateway" {
   default     = false
 }
 
+variable "gateway_autoscale_max" {
+  description = "The maximum number of gateway replicas to run"
+  type        = number
+  default     = 5
+}
+
 variable "gateway_autoscale_min" {
   description = "The minimum number of gateway replicas to run"
   type        = number
@@ -87,12 +93,6 @@ variable "multi_cluster_service_clusters" {
     link = string
   }))
   default = []
-}
-
-variable "node_location" {
-  description = "The zone in which the cluster's nodes should be located. If not specified, the cluster's nodes are located across zones in the region"
-  type        = string
-  default     = null
 }
 
 variable "pilot_autoscale_min" {
