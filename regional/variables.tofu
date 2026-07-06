@@ -95,12 +95,6 @@ variable "multi_cluster_service_clusters" {
   default = []
 }
 
-variable "node_location" {
-  description = "The zone in which the cluster's nodes should be located. If not specified, the cluster's nodes are located across zones in the region"
-  type        = string
-  default     = null
-}
-
 variable "pilot_autoscale_min" {
   description = "The minimum number of Istio pilot replicas to run"
   type        = number
