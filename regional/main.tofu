@@ -200,6 +200,10 @@ resource "kubernetes_manifest" "istio_gateway" {
           "cloud.google.com/app-protocols"  = jsonencode({ "https" = "HTTPS" })
           "cloud.google.com/backend-config" = jsonencode({ "default" = "istio-gateway-backend" })
           "cloud.google.com/neg"            = jsonencode({ "ingress" = true })
+
+          # Suppress IST0170: The MCS only exports port 443 (not status-port 15021) by design,
+          # so Istio sees inconsistent ports across clusters. This is expected.
+          "galley.istio.io/analyze-suppress" = "IST0170"
         }
 
         labels = {
