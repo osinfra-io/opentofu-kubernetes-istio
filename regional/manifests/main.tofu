@@ -135,9 +135,10 @@ resource "kubernetes_manifest" "istio_http_routes" {
 
       parentRefs = [
         {
-          group = "gateway.networking.k8s.io"
-          kind  = "Gateway"
-          name  = "gateway"
+          group     = "gateway.networking.k8s.io"
+          kind      = "Gateway"
+          name      = "gateway"
+          namespace = "istio-ingress"
         }
       ]
 
@@ -220,9 +221,10 @@ resource "kubernetes_manifest" "istio_test_http_routes" {
 
       parentRefs = [
         {
-          group = "gateway.networking.k8s.io"
-          kind  = "Gateway"
-          name  = "gateway"
+          group     = "gateway.networking.k8s.io"
+          kind      = "Gateway"
+          name      = "gateway"
+          namespace = "istio-ingress"
         }
       ]
 
