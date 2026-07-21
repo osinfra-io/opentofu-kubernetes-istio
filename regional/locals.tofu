@@ -4,6 +4,71 @@
 locals {
   gateway_domains = keys(var.gateway_dns)
 
+  # Gateway listeners. When gateway_listeners is provided, one HTTPS listener is
+  # generated per team: the listener hostname restricts which host the team may
+  # serve (Gateway API intersects each attached route's hostnames with it), and
+  # the allowedRoutes namespace selector on osinfra.io/route-prefix restricts
+  # which namespaces may attach. When empty, a single listener accepting routes
+  # from all namespaces is used (backward compatible). The istio-gateway-tls
+  # certificate must cover every listener hostname.
+  gateway_listeners = length(var.gateway_listeners) > 0 ? [
+    for name, listener in var.gateway_listeners : {
+      allowedRoutes = {
+        namespaces = {
+          from = "Selector"
+
+          selector = {
+            matchLabels = {
+              "osinfra.io/route-prefix" = listener.route_prefix
+            }
+          }
+        }
+      }
+
+      hostname = listener.hostname
+      name     = name
+      port     = 443
+      protocol = "HTTPS"
+
+      tls = {
+        certificateRefs = [
+          {
+            kind = "Secret"
+            name = "istio-gateway-tls"
+          }
+        ]
+
+        mode = "Terminate"
+      }
+    }
+    ] : [
+    {
+      allowedRoutes = {
+        namespaces = {
+          from = "All"
+
+          selector = null
+        }
+      }
+
+      hostname = null
+      name     = "https"
+      port     = 443
+      protocol = "HTTPS"
+
+      tls = {
+        certificateRefs = [
+          {
+            kind = "Secret"
+            name = "istio-gateway-tls"
+          }
+        ]
+
+        mode = "Terminate"
+      }
+    }
+  ]
+
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway

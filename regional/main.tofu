@@ -220,30 +220,7 @@ resource "kubernetes_manifest" "istio_gateway" {
         }
       }
 
-      listeners = [
-        {
-          allowedRoutes = {
-            namespaces = {
-              from = "All"
-            }
-          }
-
-          name     = "https"
-          port     = 443
-          protocol = "HTTPS"
-
-          tls = {
-            certificateRefs = [
-              {
-                kind = "Secret"
-                name = "istio-gateway-tls"
-              }
-            ]
-
-            mode = "Terminate"
-          }
-        }
-      ]
+      listeners = local.gateway_listeners
     }
   }
 }
