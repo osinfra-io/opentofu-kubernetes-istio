@@ -24,6 +24,11 @@ resource "kubernetes_manifest" "istio_cluster_services_destination_rule" {
     kind       = "DestinationRule"
 
     metadata = {
+      annotations = {
+        # IST0174: Wildcard host doesn't match specific services; this is intentional
+        # for applying cluster-wide traffic policies.
+        "galley.istio.io/analyze-suppress" = "IST0174"
+      }
       name      = "cluster-services"
       namespace = "istio-system"
     }
@@ -157,6 +162,11 @@ resource "kubernetes_manifest" "istio_kubernetes_default_destination_rule" {
     kind       = "DestinationRule"
 
     metadata = {
+      annotations = {
+        # IST0174: kubernetes.default.svc is the Kubernetes API server, not part of
+        # the mesh. This rule disables mTLS to ensure API server access works.
+        "galley.istio.io/analyze-suppress" = "IST0174"
+      }
       name      = "kubernetes-default"
       namespace = "istio-system"
     }
