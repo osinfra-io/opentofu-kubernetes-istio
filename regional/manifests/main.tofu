@@ -151,6 +151,15 @@ resource "kubernetes_manifest" "istio_http_routes" {
               port      = each.value.backend_port
             }
           ]
+
+          matches = [
+            {
+              path = {
+                type  = "PathPrefix"
+                value = each.value.path
+              }
+            }
+          ]
         }
       ]
     }
@@ -198,56 +207,6 @@ resource "kubernetes_manifest" "istio_peer_authentication" {
       mtls = {
         mode = "STRICT"
       }
-    }
-  }
-}
-
-resource "kubernetes_manifest" "istio_test_http_routes" {
-  for_each = local.istio_test_routes_merged
-
-  manifest = {
-    apiVersion = "gateway.networking.k8s.io/v1"
-    kind       = "HTTPRoute"
-
-    metadata = {
-      name      = each.key
-      namespace = each.value.backend_namespace
-    }
-
-    spec = {
-      hostnames = [
-        each.value.host
-      ]
-
-      parentRefs = [
-        {
-          group     = "gateway.networking.k8s.io"
-          kind      = "Gateway"
-          name      = "gateway"
-          namespace = "istio-ingress"
-        }
-      ]
-
-      rules = [
-        {
-          backendRefs = [
-            {
-              name      = each.value.backend_service
-              namespace = each.value.backend_namespace
-              port      = each.value.backend_port
-            }
-          ]
-
-          matches = [
-            {
-              path = {
-                type  = "PathPrefix"
-                value = "/istio-test"
-              }
-            }
-          ]
-        }
-      ]
     }
   }
 }
