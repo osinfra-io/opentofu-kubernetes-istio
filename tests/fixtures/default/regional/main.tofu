@@ -26,13 +26,6 @@ module "test" {
   enable_istio_gateway = true
   gateway_dns          = var.gateway_dns
 
-  gateway_listeners = {
-    mock-team = {
-      hostname     = "mock-team.mock-environment.mock-subdomain.mock-domain"
-      route_prefix = "mock-team"
-    }
-  }
-
   labels = {
     "mock-key" = "mock-value"
   }

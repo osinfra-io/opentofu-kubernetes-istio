@@ -57,15 +57,6 @@ variable "gateway_dns" {
   default = {}
 }
 
-variable "gateway_listeners" {
-  description = "Map of per-team HTTPS listeners for the shared gateway, keyed by listener name (the team route prefix). Each listener restricts routes to its hostname and to namespaces labeled osinfra.io/route-prefix with the matching prefix. When empty, a single listener accepting routes from all namespaces is used."
-  type = map(object({
-    hostname     = string
-    route_prefix = string
-  }))
-  default = {}
-}
-
 variable "gateway_mci_global_address" {
   description = "The IP address for the Istio Gateway multi-cluster ingress"
   type        = string
