@@ -117,7 +117,7 @@ resource "kubernetes_manifest" "istio_gateway_authorization_policy" {
 }
 
 resource "kubernetes_manifest" "istio_http_routes" {
-  for_each = local.routes_merged
+  for_each = var.routes
 
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
