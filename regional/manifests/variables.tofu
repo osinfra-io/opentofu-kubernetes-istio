@@ -22,4 +22,9 @@ variable "routes" {
     host              = string
     path              = optional(string, "/")
   }))
+
+  validation {
+    condition     = alltrue([for route in var.routes : startswith(route.path, "/") && !strcontains(route.path, "//")])
+    error_message = "Each route path must begin with '/' and must not contain consecutive slashes."
+  }
 }
