@@ -4,6 +4,43 @@
 locals {
   gateway_domains = keys(var.gateway_dns)
 
+  # Gateway listener. A single catch-all HTTPS listener terminates TLS for every
+  # team's traffic. hostname is null so Envoy builds a default (no-SNI) filter
+  # chain: the fronting GCP L7 load balancer re-originates TLS to the backend
+  # without forwarding client SNI, so an SNI-matched chain would never match.
+  # allowedRoutes.from is All because per-team isolation is enforced upstream in
+  # IaC/workflows (route intent is declared in Logos and PR-reviewed, HTTPRoute
+  # hostnames are derived from each team's authoritative DNS zone, and only the
+  # deploy workflow applies routes), not at runtime by the gateway. The
+  # istio-gateway-tls wildcard certificate covers every host.
+  gateway_listeners = [
+    {
+      allowedRoutes = {
+        namespaces = {
+          from = "All"
+
+          selector = null
+        }
+      }
+
+      hostname = null
+      name     = "https"
+      port     = 443
+      protocol = "HTTPS"
+
+      tls = {
+        certificateRefs = [
+          {
+            kind = "Secret"
+            name = "istio-gateway-tls"
+          }
+        ]
+
+        mode = "Terminate"
+      }
+    }
+  ]
+
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway

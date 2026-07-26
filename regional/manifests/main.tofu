@@ -117,7 +117,7 @@ resource "kubernetes_manifest" "istio_gateway_authorization_policy" {
 }
 
 resource "kubernetes_manifest" "istio_http_routes" {
-  for_each = local.routes_merged
+  for_each = var.routes
 
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"
@@ -125,7 +125,7 @@ resource "kubernetes_manifest" "istio_http_routes" {
 
     metadata = {
       name      = each.key
-      namespace = "istio-ingress"
+      namespace = each.value.backend_namespace
     }
 
     spec = {
@@ -135,9 +135,10 @@ resource "kubernetes_manifest" "istio_http_routes" {
 
       parentRefs = [
         {
-          group = "gateway.networking.k8s.io"
-          kind  = "Gateway"
-          name  = "gateway"
+          group     = "gateway.networking.k8s.io"
+          kind      = "Gateway"
+          name      = "gateway"
+          namespace = "istio-ingress"
         }
       ]
 
@@ -148,6 +149,15 @@ resource "kubernetes_manifest" "istio_http_routes" {
               name      = each.value.backend_service
               namespace = each.value.backend_namespace
               port      = each.value.backend_port
+            }
+          ]
+
+          matches = [
+            {
+              path = {
+                type  = "PathPrefix"
+                value = each.value.path
+              }
             }
           ]
         }
@@ -197,86 +207,6 @@ resource "kubernetes_manifest" "istio_peer_authentication" {
       mtls = {
         mode = "STRICT"
       }
-    }
-  }
-}
-
-resource "kubernetes_manifest" "istio_route_reference_grants" {
-  for_each = local.route_backend_namespaces
-
-  manifest = {
-    apiVersion = "gateway.networking.k8s.io/v1beta1"
-    kind       = "ReferenceGrant"
-
-    metadata = {
-      name      = "istio-ingress-routes"
-      namespace = each.value
-    }
-
-    spec = {
-      from = [
-        {
-          group     = "gateway.networking.k8s.io"
-          kind      = "HTTPRoute"
-          namespace = "istio-ingress"
-        }
-      ]
-
-      to = [
-        {
-          group = ""
-          kind  = "Service"
-        }
-      ]
-    }
-  }
-}
-
-resource "kubernetes_manifest" "istio_test_http_routes" {
-  for_each = local.istio_test_routes_merged
-
-  manifest = {
-    apiVersion = "gateway.networking.k8s.io/v1"
-    kind       = "HTTPRoute"
-
-    metadata = {
-      name      = each.key
-      namespace = "istio-ingress"
-    }
-
-    spec = {
-      hostnames = [
-        each.value.host
-      ]
-
-      parentRefs = [
-        {
-          group = "gateway.networking.k8s.io"
-          kind  = "Gateway"
-          name  = "gateway"
-        }
-      ]
-
-      rules = [
-        {
-          backendRefs = [
-            {
-              name      = each.value.backend_service
-              namespace = each.value.backend_namespace
-              port      = each.value.backend_port
-            }
-          ]
-
-          matches = [
-            {
-              path = {
-                type  = "PathPrefix"
-                value = "/istio-test"
-              }
-            }
-          ]
-        }
-      ]
     }
   }
 }
