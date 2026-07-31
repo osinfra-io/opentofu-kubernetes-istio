@@ -23,7 +23,9 @@ locals {
         }
       }
 
-      hostname = null
+      # hostname is intentionally omitted (not set to null): a listener without a hostname is
+      # catch-all, and the kubernetes_manifest provider treats an explicit null as a
+      # known-after-apply value, which produces a perpetual in-place diff on every plan.
       name     = "https"
       port     = 443
       protocol = "HTTPS"
